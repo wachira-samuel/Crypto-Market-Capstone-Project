@@ -92,8 +92,36 @@ Apache Airflow is the orchestration backbone of the entire pipeline. Every stage
 
 ### DAG Definition — `dags/crypto_market_etl.py`
 
+    from airflow import DAG
+    fromairflow.operators.python import PythonOperator
+    from datetime import datetime
+    import subprocess
 
-
+  
+    def fetch_data():
+    subprocess.run(["python","/opt/airflow/scripts/fetch_crypto_data.py"])
+    
+    def stream_kafka():
+    subprocess.run(["python", "/opt/airflow/scripts/kakfka_producer.py"])
+    
+    with DAG(
+    dag_id="crypto_pipeline",
+    start_date=datetime(2026,5,22),
+    schedule= "@hourly",
+    catchup = False
+    ) as dag:
+    
+    task1 =PythonOperator(
+        task_id ="fetch_crypto_data",
+        python_callable =fetch_data
+    )
+    
+    task2= PythonOperator(
+        task_id ="stream_to_kafka",
+        python_callable = stream_kafka
+    )
+    
+    task1 >> task2
 
 
 ### Airflow Setup
@@ -151,24 +179,71 @@ KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 CASSANDRA_HOST=localhost
 CASSANDRA_KEYSPACE=crypto_analytics
 ```
-## Project File Structure
+## Project FIle Structure
 
 
+                ┌──────────────────────┐
+                │ Binance / Kraken API │
+                └──────────┬───────────┘
+                           │
+                           ▼
+                ┌──────────────────────┐
+                │      Airflow         │
+                │  Ingestion & ETL     │
+                └──────────┬───────────┘
+                           │
+                           ▼
+                ┌──────────────────────┐
+                │     PostgreSQL       │
+                │   Raw/Staging Data   │
+                └──────────┬───────────┘
+                           │
+                           ▼
+                ┌──────────────────────┐
+                │        Kafka         │
+                │   Streaming Layer    │
+                └──────────┬───────────┘
+                           │
+                           ▼
+                ┌──────────────────────┐
+                │      Cassandra       │
+                │ Processed Analytics  │
+                └──────────────────────┘
 
 
+```
+crypto_pipeline/
+│
+├── dags/
+│   └── crypto_pipeline_dag.py
+│
+├── scripts/
+│   ├── fetch_crypto_data.py
+│   ├── kafka_producer.py
+│   ├── spark_stream.py
+│   └── cassandra_loader.py
+│
+├── requirements.txt
+├── docker-compose.yml
+├── .env
+└── .gitignore
+```
 
-## System Requirements
+## Run commands
 
-Your pipeline must include:
+## Start Docker containers
+    docker-compose up -d
 
-- Batch and streaming hybrid architecture
-- Apache Airflow for orchestration
-- Apache Kafka for real-time streaming
-- Apache Spark for distributed processing
-- PostgreSQL for raw storage
-- Cassandra for processed storage
+## Run Airflow
+    airflow standalone
 
----
+## Run Spark stream
+    spark-submit scripts/spark_stream.py
+
+## Run Cassandra loader
+    python scripts/cassandra_loader.py
+
+
 
 ## Contributions
 Contributions are welcome! Kindly fork this repository and submit a pull request with your proposed changes.
