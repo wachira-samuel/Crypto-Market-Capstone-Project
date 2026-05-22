@@ -23,7 +23,7 @@ df =pd.dataFrame([{
 print(df)
 
 #Postgresql connection
-engine = create_engine("postgresql+psycopg2://postgres:12345@localhosy:5432/crypto_pipeline")
+engine = create_engine("postgresql+psycopg2://postgres:12345@localhost:5432/crypto_pipeline")
 
 #store into PostgreSQL
 df.to_sql(
